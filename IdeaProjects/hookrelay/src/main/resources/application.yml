@@ -25,3 +25,10 @@ management:
     web:
       exposure:
         include: health,info
+
+hookrelay:
+  security:
+    jwt-secret: ${JWT_SECRET:dev-only-secret-change-me-in-production-32chars-min}
+    jwt-expiry-minutes: 60
+
+
