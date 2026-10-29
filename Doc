@@ -1,0 +1,89 @@
+Here is a clean, document-ready version you can copy and paste into Word or Google Docs.
+
+# NotifyHub Database Design Decisions
+
+| Decision                               | Main Reason                                                                                                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Two IDs: `id` and `public_id`          | Use `BIGINT` for efficient internal relationships and UUIDs for non-sequential public identifiers exposed through APIs.                                      |
+| Separate `notification_attempts` table | Preserve the complete retry history, including failed attempts and successful retries.                                                                       |
+| Unique idempotency constraint          | Prevent duplicate notification records for the same tenant and idempotency key.                                                                              |
+| Query-based indexes                    | Improve performance for common queries, such as finding scheduled notifications, retrieving recipient history, and locating attempts from provider webhooks. |
+| Hashed API keys                        | Reduce the risk of API key exposure if the database is compromised.                                                                                          |
+| `VARCHAR` with Java enums              | Keep status and channel values flexible in the database while maintaining type safety in Java.                                                               |
+| `DATETIME(6)` stored in UTC            | Maintain consistent timestamps across time zones with microsecond precision.                                                                                 |
+| `@Version` for optimistic locking      | Detect conflicting concurrent database updates and prevent silent overwriting of newer data.                                                                 |
+
+                         ┌──────────────────┐
+                         │      TENANTS     │
+                         ├──────────────────┤
+                         │ PK id             │
+                         │ UK public_id      │
+                         │ name              │
+                         │ status            │
+                         │ created_at        │
+                         │ updated_at        │
+                         └────────┬─────────┘
+                                  │
+                   ┌──────────────┼───────────────┐
+                   │              │               │
+                   │ 1:N          │ 1:N           │ 1:N
+                   ▼              ▼               ▼
+          ┌────────────────┐ ┌──────────────┐ ┌────────────────┐
+          │    API_KEYS    │ │  RECIPIENTS  │ │   TEMPLATES    │
+          ├────────────────┤ ├──────────────┤ ├────────────────┤
+          │ PK id          │ │ PK id        │ │ PK id          │
+          │ FK tenant_id   │ │ FK tenant_id │ │ FK tenant_id   │
+          │ name           │ │ public_id    │ │ name           │
+          │ key_prefix     │ │ external_id  │ │ channel        │
+          │ key_hash       │ │ email        │ │ version_no     │
+          │ status         │ │ phone        │ │ subject        │
+          │ expires_at     │ │ device_token │ │ body           │
+          └────────────────┘ │ timezone     │ │ active         │
+                             └──────┬───────┘ └───────┬────────┘
+                                    │                 │
+                                    │ 1:N             │ 1:N
+                                    ▼                 │
+                       ┌─────────────────────┐        │
+                       │ RECIPIENT_PREFERENCES│        │
+                       ├─────────────────────┤        │
+                       │ PK id               │        │
+                       │ FK recipient_id     │        │
+                       │ channel             │        │
+                       │ enabled             │        │
+                       └─────────────────────┘        │
+                                                      │
+                         ┌────────────────────────────┘
+                         │
+                         │
+                         ▼
+                 ┌──────────────────────┐
+                 │    NOTIFICATIONS     │
+                 ├──────────────────────┤
+                 │ PK id                │
+                 │ UK public_id         │
+                 │ FK tenant_id         │
+                 │ FK recipient_id      │
+                 │ FK template_id       │
+                 │ channel              │
+                 │ status               │
+                 │ payload              │
+                 │ idempotency_key      │
+                 │ scheduled_at         │
+                 │ sent_at              │
+                 │ retry_count          │
+                 │ failure_reason       │
+                 └──────────┬───────────┘
+                            │
+                            │ 1:N
+                            ▼
+                 ┌──────────────────────┐
+                 │ NOTIFICATION_ATTEMPTS│
+                 ├──────────────────────┤
+                 │ PK id                │
+                 │ FK notification_id   │
+                 │ attempt_no           │
+                 │ provider             │
+                 │ status               │
+                 │ provider_message_id  │
+                 │ error_message        │
+                 └──────────────────────┘

@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: notifyhub
+  datasource:
+    url: jdbc:mysql://localhost:3307/notifyhub
+    username: ${DB_USER:notifyhub}
+    password: ${DB_PASSWORD:notifyhub}
+  jpa:
+    jpa:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
+      properties:
+        hibernate:
+          jdbc:
+            time_zone: UTC
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+server:
+  port: 8080
