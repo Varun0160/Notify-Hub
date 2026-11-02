@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "api_keys")
@@ -36,6 +37,9 @@ public class ApiKey extends BaseEntity {
 
     private Instant expiresAt;
     private Instant lastUsedAt;
+
+    @Column(nullable = false, updatable = false, length = 36)
+    private String publicId = UUID.randomUUID().toString();
 
     public ApiKey(Tenant tenant, String name, String keyPrefix, String keyHash) {
         this.tenant = tenant;
