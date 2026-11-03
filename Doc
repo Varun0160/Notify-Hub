@@ -87,3 +87,14 @@ Here is a clean, document-ready version you can copy and paste into Word or Goog
                  │ provider_message_id  │
                  │ error_message        │
                  └──────────────────────┘
+
+
+Client (X-API-Key header)
+  → Tomcat (embedded web server)
+  → Security Filter Chain (ApiKeyAuthFilter: who are you?)
+  → DispatcherServlet (finds the right controller)
+  → Controller (validates input, calls service)
+  → Service (business logic, transaction)
+  → Repository (Spring Data JPA → Hibernate → SQL)
+  → MySQL
+  → response travels back as JSON

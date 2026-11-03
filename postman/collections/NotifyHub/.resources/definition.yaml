@@ -1,5 +1,23 @@
 $kind: collection
 variables:
-  tenantId: ""
-  keyId: ""
-  apiKey: ""
+  - key: tenantId
+    value: 07d8d75f-6910-4ef2-baf7-3b993d9e43f2
+    disabled: false
+  - key: keyId
+    value: 1b66350e-1b01-407c-89b3-37dfe1774653
+    disabled: false
+  - key: apiKey
+    value: nh_yWRrhrPJNZngv9Gq157goqYUrNASNSnnEmAya3-CPJE
+    disabled: false
+  - key: accessToken
+    value: "{{json_web_token_0q1e}}"
+    disabled: false
+  - key: refreshToken
+    value: 36ztZBT97zlWfzTg3ubrRyeaT7ldDTeJNnvAHQE3-NE
+    disabled: false
+  - key: json_web_token_0q1e
+    secret: true
+    disabled: false
+  - key: json_web_token_0ygw
+    secret: true
+    disabled: false

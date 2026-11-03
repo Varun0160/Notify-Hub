@@ -1,0 +1,13 @@
+$kind: http-request
+name: localhost:8080/api/v1/tenants
+description: ""
+url: localhost:8080/api/v1/tenants
+method: POST
+body:
+  type: json
+  content: '{ "name": "shop-one" }'
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_0ygw}}"
+order: 7000
