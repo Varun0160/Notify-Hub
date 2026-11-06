@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -85,6 +86,13 @@ public class GlobalExceptionHandler {
                                                             HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST,
                 "Invalid value for parameter '" + ex.getName() + "'", request, null);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex,
+                                                            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST,
+                "Missing required parameter '" + ex.getParameterName() + "'", request, null);
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message,

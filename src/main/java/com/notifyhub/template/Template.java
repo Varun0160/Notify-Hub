@@ -14,7 +14,6 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "templates")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Template extends BaseEntity {
 
@@ -39,6 +38,17 @@ public class Template extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
+    @Setter
     @Column(nullable = false)
     private boolean active = true;
+
+    public Template(Tenant tenant, String name, Channel channel,
+                    int versionNo, String subject, String body) {
+        this.tenant = tenant;
+        this.name = name;
+        this.channel = channel;
+        this.versionNo = versionNo;
+        this.subject = subject;
+        this.body = body;
+    }
 }
