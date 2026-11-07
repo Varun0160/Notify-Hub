@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/me").hasAnyRole("ADMIN", "VIEWER")
                         .requestMatchers("/api/v1/recipients/**").hasRole("TENANT")
                         .requestMatchers("/api/v1/templates/**").hasRole("TENANT")
+                        .requestMatchers("/api/v1/notifications/**").hasRole("TENANT")
                         .requestMatchers("/api/v1/tenants/**", "/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/me").hasRole("TENANT")
                         .anyRequest().authenticated())

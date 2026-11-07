@@ -108,4 +108,10 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyConflict(IdempotencyConflictException ex,
+                                                                   HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request, null);
+    }
 }

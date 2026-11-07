@@ -20,7 +20,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "notifications")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseEntity {
 
@@ -43,26 +42,52 @@ public class Notification extends BaseEntity {
     @Column(nullable = false, length = 10)
     private Channel channel;
 
+    // No setter: the only way to change status is transitionTo(...)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private NotificationStatus status = NotificationStatus.QUEUED;
 
+    @Setter
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(columnDefinition = "TEXT")
     private String payload;
 
+    @Setter
     @Column(length = 100)
     private String idempotencyKey;
 
+    @Setter
+    @Column(length = 64)
+    private String requestHash;
+
+    @Setter
     private Instant scheduledAt;
+
+    @Setter
     private Instant sentAt;
 
+    @Setter
     @Column(nullable = false)
     private int retryCount = 0;
 
+    @Setter
     @Column(length = 500)
     private String failureReason;
 
     @Version
     private Long version;
+
+    public Notification(Tenant tenant, Recipient recipient, Template template, Channel channel) {
+        this.tenant = tenant;
+        this.recipient = recipient;
+        this.template = template;
+        this.channel = channel;
+    }
+
+    public void transitionTo(NotificationStatus next) {
+        if (!status.canTransitionTo(next)) {
+            throw new IllegalStateException("Illegal status change: " + status + " -> " + next);
+        }
+        this.status = next;
+    }
 }

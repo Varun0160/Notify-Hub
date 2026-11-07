@@ -1,8 +1,7 @@
-package com.notifyhub.notifyhub.template;
+package com.notifyhub.template;
 
 import com.notifyhub.common.enums.Channel;
 import com.notifyhub.common.exception.InvalidRequestException;
-import com.notifyhub.template.TemplateRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
