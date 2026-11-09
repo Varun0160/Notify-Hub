@@ -13,6 +13,13 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBIT_USER:notifyhub}
+    password: ${RABBIT_PASSWORD:notifyhub}
+    connection-timeout: 3s
+    publisher-confirm-type: simple
 
 management:
   endpoints:
@@ -33,3 +40,6 @@ notifyhub:
   bootstrap-admin:
     email: ${ADMIN_EMAIL:admin@notifyhub.local}
     password: ${ADMIN_PASSWORD:Admin@12345}
+  sweeper:
+    interval-ms: 10000
+    min-age-seconds: 15

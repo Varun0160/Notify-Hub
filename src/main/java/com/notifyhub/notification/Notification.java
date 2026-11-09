@@ -66,6 +66,8 @@ public class Notification extends BaseEntity {
     @Setter
     private Instant sentAt;
 
+    private Instant publishedAt;
+
     @Setter
     @Column(nullable = false)
     private int retryCount = 0;

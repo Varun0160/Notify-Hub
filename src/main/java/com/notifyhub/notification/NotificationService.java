@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -42,6 +43,7 @@ public class NotificationService {
     private final TemplateRepository templateRepository;
     private final TenantRepository tenantRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public SendResult accept(Long tenantId, SendNotificationRequest request, String idempotencyKey) {
@@ -106,6 +108,14 @@ public class NotificationService {
         // The INSERT happens here. A concurrent duplicate key fails here with
         // DataIntegrityViolationException, which IdempotentSendService handles.
         Notification saved = notificationRepository.save(notification);
+
+        // Only notifications that are QUEUED and due now go to the broker immediately.
+        // SKIPPED ones, and ones deferred to a later time, do not.
+        boolean dueNow = scheduledAt == null || !scheduledAt.isAfter(now);
+        if (saved.getStatus() == NotificationStatus.QUEUED && dueNow) {
+            eventPublisher.publishEvent(new NotificationQueuedEvent(
+                    saved.getId(), saved.getPublicId(), saved.getChannel()));
+        }
         return new SendResult(NotificationResponse.from(saved), false);
     }
 

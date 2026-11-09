@@ -8,7 +8,7 @@ services:
       MYSQL_USER: notifyhub
       MYSQL_PASSWORD: notifyhub
     ports:
-      - "3307:3306"   # 3307 on your machine, so it won't clash with a local MySQL
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -16,5 +16,22 @@ services:
       interval: 10s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: notifyhub-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: notifyhub
+      RABBITMQ_DEFAULT_PASS: notifyhub
+    ports:
+      - "5672:5672"     # AMQP: what our app connects to
+      - "15672:15672"   # management web UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 5
+
 volumes:
   mysql_data:
+  rabbitmq_data:

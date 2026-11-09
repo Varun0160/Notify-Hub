@@ -1,0 +1,30 @@
+$kind: http-request
+url: http://localhost:8080/api/v1/notifications
+method: POST
+headers:
+  - key: x-api-key
+    value: nh_OdYLIXC20g1cfXpPvEZTP_UYdIsMBmORU7uHCTEo0Gs
+    disabled: false
+    description: ""
+  - key: Idempotency-Key
+    value: step11-invalid-01
+    disabled: false
+    description: ""
+  - key: ""
+    value: ""
+    disabled: true
+    description: ""
+body:
+  type: json
+  content: "{\r
+
+    \  \"recipientId\": \"dee390c8-4e2c-45cf-853d-6f023d92d4f8\",\r
+
+    \  \"channel\": \"EMAIL\",\r
+
+    \  \"template\": \"welcome\",\r
+
+    \  \"variables\": {}\r
+
+    }"
+order: 1000
