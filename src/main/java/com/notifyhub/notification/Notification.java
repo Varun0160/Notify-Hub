@@ -92,4 +92,21 @@ public class Notification extends BaseEntity {
         }
         this.status = next;
     }
+
+    public void fail(String reason) {
+        transitionTo(NotificationStatus.FAILED);
+        this.failureReason = truncate(reason, 500);
+    }
+
+    /** Back to QUEUED for another try. Clearing publishedAt lets the sweeper republish it. */
+    public void requeueForRetry(String reason) {
+        transitionTo(NotificationStatus.QUEUED);
+        this.retryCount++;
+        this.publishedAt = null;
+        this.failureReason = truncate(reason, 500);
+    }
+
+    private static String truncate(String s, int max) {
+        return (s == null || s.length() <= max) ? s : s.substring(0, max);
+    }
 }

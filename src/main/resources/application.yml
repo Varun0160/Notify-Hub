@@ -20,6 +20,12 @@ spring:
     password: ${RABBIT_PASSWORD:notifyhub}
     connection-timeout: 3s
     publisher-confirm-type: simple
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 5
+        concurrency: 2
+        max-concurrency: 4
 
 management:
   endpoints:
@@ -32,6 +38,8 @@ server:
 
 
 notifyhub:
+  worker:
+    simulated-delay-ms: 0
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-at-least-32-bytes-long!!}
     issuer: notifyhub
@@ -43,3 +51,12 @@ notifyhub:
   sweeper:
     interval-ms: 10000
     min-age-seconds: 15
+
+    providers:
+      email: mock            # mock | sendgrid
+      sendgrid:
+        api-key: ${SENDGRID_API_KEY:}
+        from-email: ${SENDGRID_FROM_EMAIL:}
+        base-url: https://api.sendgrid.com
+        connect-timeout-ms: 3000
+        read-timeout-ms: 5000
