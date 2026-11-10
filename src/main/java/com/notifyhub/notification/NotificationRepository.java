@@ -36,4 +36,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Query("update Notification n set n.publishedAt = :at where n.id = :id")
     int markPublished(@Param("id") Long id, @Param("at") Instant at);
+
+    /** PROCESSING rows untouched since the cutoff: their worker most likely died. */
+    @Query("select n from Notification n "
+            + "where n.status = com.notifyhub.common.enums.NotificationStatus.PROCESSING "
+            + "and n.updatedAt < :cutoff "
+            + "order by n.id")
+    List<Notification> findStaleProcessing(@Param("cutoff") Instant cutoff, Pageable pageable);
 }

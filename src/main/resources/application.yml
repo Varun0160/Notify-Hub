@@ -52,7 +52,7 @@ notifyhub:
     interval-ms: 10000
     min-age-seconds: 15
 
-    providers:
+  providers:
       email: mock            # mock | sendgrid
       sendgrid:
         api-key: ${SENDGRID_API_KEY:}
@@ -60,3 +60,11 @@ notifyhub:
         base-url: https://api.sendgrid.com
         connect-timeout-ms: 3000
         read-timeout-ms: 5000
+
+  retry:
+    max-attempts: 5
+    base-delay-seconds: 10
+    max-delay-seconds: 3600
+  reaper:
+    interval-ms: 30000
+    stale-after-seconds: 120

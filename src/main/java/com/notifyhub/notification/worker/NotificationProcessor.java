@@ -26,11 +26,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class NotificationProcessor {
 
-    public static final int MAX_ATTEMPTS = 3;
+    public static final String STALE_REASON = "Worker did not report a result (crash or timeout)";
 
     private final NotificationRepository notificationRepository;
     private final NotificationAttemptRepository attemptRepository;
     private final ObjectMapper objectMapper;
+    private final RetryPolicy retryPolicy;
 
     /** Transaction 1: take ownership. Throws ObjectOptimisticLockingFailureException if we lose a race. */
     @Transactional
@@ -103,14 +104,40 @@ public class NotificationProcessor {
             case RETRYABLE_FAILURE -> {
                 attempt.setStatus(AttemptStatus.FAILED);
                 attempt.setErrorMessage(truncate(outcome.error(), 1000));
-                if (attemptNo >= MAX_ATTEMPTS) {
-                    notification.fail("RETRIES_EXHAUSTED: " + outcome.error());
-                } else {
-                    notification.requeueForRetry(outcome.error());
-                }
+                retryOrFail(notification, attemptNo, outcome.error());
             }
         }
         attemptRepository.save(attempt);
+    }
+
+    /**
+     * Called by the reaper for a notification whose worker never reported back.
+     * Returns false if the row is no longer PROCESSING (the worker finished after all).
+     */
+    @Transactional
+    public boolean recoverStale(Long id) {
+        Notification notification = notificationRepository.findById(id).orElse(null);
+        if (notification == null || notification.getStatus() != NotificationStatus.PROCESSING) {
+            return false;
+        }
+        int attemptNo = notification.getRetryCount() + 1;
+
+        NotificationAttempt attempt = new NotificationAttempt(notification, attemptNo, "reaper");
+        attempt.setStatus(AttemptStatus.FAILED);
+        attempt.setErrorMessage(STALE_REASON);
+        attemptRepository.save(attempt);
+
+        retryOrFail(notification, attemptNo, STALE_REASON);
+        return true;
+    }
+
+    // One rule for every retryable problem, whether it came from a provider or from a dead worker.
+    private void retryOrFail(Notification notification, int attemptNo, String error) {
+        if (attemptNo >= retryPolicy.maxAttempts()) {
+            notification.fail("RETRIES_EXHAUSTED: " + error);
+        } else {
+            notification.requeueForRetry(error, retryPolicy.nextAttemptAt(Instant.now(), attemptNo));
+        }
     }
 
     private static String truncate(String s, int max) {

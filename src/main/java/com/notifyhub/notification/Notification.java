@@ -98,11 +98,12 @@ public class Notification extends BaseEntity {
         this.failureReason = truncate(reason, 500);
     }
 
-    /** Back to QUEUED for another try. Clearing publishedAt lets the sweeper republish it. */
-    public void requeueForRetry(String reason) {
+    /** Back to QUEUED for another try, not before nextAttemptAt. Clearing publishedAt lets the sweeper release it. */
+    public void requeueForRetry(String reason, Instant nextAttemptAt) {
         transitionTo(NotificationStatus.QUEUED);
         this.retryCount++;
         this.publishedAt = null;
+        this.scheduledAt = nextAttemptAt;
         this.failureReason = truncate(reason, 500);
     }
 
