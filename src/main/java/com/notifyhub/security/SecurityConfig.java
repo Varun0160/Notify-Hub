@@ -1,5 +1,8 @@
 package com.notifyhub.security;
 
+import com.notifyhub.ratelimit.RateLimitFilter;
+import com.notifyhub.ratelimit.RateLimitProperties;
+import com.notifyhub.ratelimit.RateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+
 import java.io.IOException;
 import java.time.Instant;
 
@@ -28,6 +32,9 @@ public class SecurityConfig {
 
     private final ApiKeyAuthenticator apiKeyAuthenticator;
     private final JwtDecoder jwtDecoder;
+
+    private final RateLimiter rateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -62,8 +69,9 @@ public class SecurityConfig {
                 .addFilterBefore(new ApiKeyAuthFilter(apiKeyAuthenticator),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new JwtAuthFilter(jwtDecoder),
-                        UsernamePasswordAuthenticationFilter.class);
-
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new RateLimitFilter(rateLimiter, rateLimitProperties),
+                        JwtAuthFilter.class);
         return http.build();
     }
 

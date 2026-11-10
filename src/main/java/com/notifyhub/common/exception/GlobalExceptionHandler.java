@@ -114,4 +114,13 @@ public class GlobalExceptionHandler {
                                                                    HttpServletRequest request) {
         return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request, null);
     }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(RateLimitExceededException ex,
+                                                         HttpServletRequest request) {
+        ErrorResponse body = build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, null).getBody();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(body);
+    }
 }

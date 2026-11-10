@@ -26,6 +26,12 @@ spring:
         prefetch: 5
         concurrency: 2
         max-concurrency: 4
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 500ms
+      connect-timeout: 500ms
 
 management:
   endpoints:
@@ -68,3 +74,12 @@ notifyhub:
   reaper:
     interval-ms: 30000
     stale-after-seconds: 120
+
+  ratelimit:
+    enabled: true
+    tenant:
+      capacity: 20
+      refill-per-second: 5
+    recipient:
+      capacity: 3
+      refill-per-second: 0.0166      # about 1 token per minute

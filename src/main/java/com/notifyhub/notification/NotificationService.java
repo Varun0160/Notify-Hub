@@ -27,6 +27,11 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
+import com.notifyhub.common.exception.RateLimitExceededException;
+import com.notifyhub.ratelimit.RateLimitDecision;
+import com.notifyhub.ratelimit.RateLimitProperties;
+import com.notifyhub.ratelimit.RateLimiter;
+
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -44,6 +49,8 @@ public class NotificationService {
     private final TenantRepository tenantRepository;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final RateLimiter rateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @Transactional
     public SendResult accept(Long tenantId, SendNotificationRequest request, String idempotencyKey) {
@@ -89,6 +96,21 @@ public class NotificationService {
         // 5. When may it go out?
         Instant scheduledAt = resolveSchedule(request, recipient, now);
 
+        // 5b. Anti-spam budget per recipient and channel. It comes AFTER the idempotent replay (step 0),
+        //     all validation, and the opt-out test, so replays, bad requests and SKIPPED messages never use a token.
+        boolean channelEnabled = isChannelEnabled(recipient, channel);
+        if (channelEnabled) {
+            RateLimitProperties.Limit limit = rateLimitProperties.recipient();
+            RateLimitDecision decision = rateLimiter.tryConsume(
+                    "notifyhub:rl:recipient:" + recipient.getId() + ":" + channel,
+                    limit.capacity(), limit.refillPerSecond());
+            if (!decision.allowed()) {
+                throw new RateLimitExceededException(
+                        "Too many " + channel + " notifications for this recipient",
+                        decision.retryAfterSeconds());
+            }
+        }
+
         // 6. Build the notification, pinned to this exact template row
         Notification notification = new Notification(
                 tenantRepository.getReferenceById(tenantId), recipient, template, channel);
@@ -100,7 +122,7 @@ public class NotificationService {
         }
 
         // 7. The recipient's explicit opt-out wins over everything, including urgent
-        if (!isChannelEnabled(recipient, channel)) {
+        if (!channelEnabled) {
             notification.transitionTo(NotificationStatus.SKIPPED);
             notification.setFailureReason(REASON_OPTED_OUT);
         }
