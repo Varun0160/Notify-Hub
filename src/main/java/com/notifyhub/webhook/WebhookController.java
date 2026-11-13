@@ -2,6 +2,7 @@ package com.notifyhub.webhook;
 
 import com.notifyhub.common.exception.InvalidRequestException;
 import com.notifyhub.common.exception.InvalidSignatureException;
+import com.notifyhub.observability.NotifyMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,7 @@ public class WebhookController {
     private final WebhookProperties props;
     private final WebhookService webhookService;
     private final ObjectMapper objectMapper;
+    private final NotifyMetrics metrics;
 
     @PostMapping("/provider")
     public Map<String, String> receive(
@@ -32,13 +34,16 @@ public class WebhookController {
             @RequestHeader(value = "X-Signature", required = false) String signature,
             @RequestBody String rawBody) {
 
+        // 0. Cheapest check first: refuse oversized bodies before doing any crypto
         if (rawBody.length() > MAX_BODY_CHARS) {
+            metrics.webhook("rejected");
             throw new InvalidRequestException("Webhook body is too large");
         }
 
         // 1. Verify FIRST, over the exact bytes we received
         if (!WebhookSignature.isValid(props.secret(), timestamp, signature, rawBody,
                 Instant.now(), props.toleranceSeconds())) {
+            metrics.webhook("rejected");
             log.warn("Rejected webhook with an invalid signature");
             throw new InvalidSignatureException("Invalid webhook signature");
         }
@@ -48,6 +53,7 @@ public class WebhookController {
 
         // 3. Apply it
         WebhookResult result = webhookService.handle(payload);
+        metrics.webhook(result.name().toLowerCase());
         return Map.of("result", result.name());
     }
 }

@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.notifyhub.ratelimit.LoginRateLimitFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 
 import java.io.IOException;
@@ -45,11 +47,15 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
+                        .referrerPolicy(ref -> ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/ping", "/error").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout").permitAll()
                         .requestMatchers("/api/v1/webhooks/**").permitAll()   // authenticated by HMAC signature, not by API key or JWT
@@ -72,7 +78,9 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthFilter(jwtDecoder),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new RateLimitFilter(rateLimiter, rateLimitProperties),
-                        JwtAuthFilter.class);
+                        JwtAuthFilter.class)
+                .addFilterAfter(new LoginRateLimitFilter(rateLimiter),
+                        RateLimitFilter.class);
         return http.build();
     }
 

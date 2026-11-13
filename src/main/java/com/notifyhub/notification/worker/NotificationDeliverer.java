@@ -1,6 +1,7 @@
 package com.notifyhub.notification.worker;
 
 import com.notifyhub.common.exception.InvalidRequestException;
+import com.notifyhub.observability.NotifyMetrics;
 import com.notifyhub.provider.NotificationProvider;
 import com.notifyhub.provider.OutboundMessage;
 import com.notifyhub.provider.ProviderRegistry;
@@ -9,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 
 @Slf4j
 @Component
@@ -20,6 +23,7 @@ public class NotificationDeliverer {
 
     private final NotificationProcessor processor;
     private final ProviderRegistry registry;
+    private final NotifyMetrics metrics;
 
     @Value("${notifyhub.worker.simulated-delay-ms:0}")
     private long simulatedDelayMs;
@@ -38,11 +42,17 @@ public class NotificationDeliverer {
 
         NotificationProvider provider = registry.forChannel(message.channel());
         pause();
+        long started = System.nanoTime();
         try {
-            return new Delivery(provider.send(message), provider.name());
+            SendOutcome outcome = provider.send(message);
+            metrics.providerCall(provider.name(), outcome.status(),
+                    Duration.ofNanos(System.nanoTime() - started));
+            return new Delivery(outcome, provider.name());
         } catch (RuntimeException ex) {
             // A provider broke its own contract (it must not throw). Treat as retryable.
             log.error("Provider {} threw an exception", provider.name(), ex);
+            metrics.providerCall(provider.name(), SendOutcome.Status.RETRYABLE_FAILURE,
+                    Duration.ofNanos(System.nanoTime() - started));
             return new Delivery(SendOutcome.retryable("Provider error: " + ex.getClass().getSimpleName()),
                     provider.name());
         }

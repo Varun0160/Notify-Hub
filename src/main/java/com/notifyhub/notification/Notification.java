@@ -69,6 +69,9 @@ public class Notification extends BaseEntity {
     private Instant publishedAt;
 
     @Setter
+    private Instant leaseUntil;
+
+    @Setter
     @Column(nullable = false)
     private int retryCount = 0;
 
@@ -98,11 +101,11 @@ public class Notification extends BaseEntity {
         this.failureReason = truncate(reason, 500);
     }
 
-    /** Back to QUEUED for another try, not before nextAttemptAt. Clearing publishedAt lets the sweeper release it. */
     public void requeueForRetry(String reason, Instant nextAttemptAt) {
         transitionTo(NotificationStatus.QUEUED);
         this.retryCount++;
         this.publishedAt = null;
+        this.leaseUntil = null;          // ← new
         this.scheduledAt = nextAttemptAt;
         this.failureReason = truncate(reason, 500);
     }

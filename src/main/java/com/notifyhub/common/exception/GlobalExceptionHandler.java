@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex,
                                                              HttpServletRequest request) {
-        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        log.warn("Data integrity violation on constraint {}", ConstraintNames.from(ex));
         return build(HttpStatus.CONFLICT, "Request conflicts with existing data", request, null);
     }
 
@@ -136,5 +136,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex,
                                                               HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, "The resource was changed by another request, please retry", request, null);
+    }
+
+
+    @ExceptionHandler(StateConflictException.class)
+    public ResponseEntity<ErrorResponse> handleStateConflict(StateConflictException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
     }
 }

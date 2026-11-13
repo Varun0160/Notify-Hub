@@ -2,11 +2,10 @@ package com.notifyhub.notification;
 
 import com.notifyhub.common.enums.Channel;
 import com.notifyhub.common.enums.NotificationStatus;
-import com.notifyhub.common.exception.IdempotencyConflictException;
-import com.notifyhub.common.exception.InvalidRequestException;
-import com.notifyhub.common.exception.ResourceNotFoundException;
+import com.notifyhub.common.exception.*;
 import com.notifyhub.notification.dto.NotificationResponse;
 import com.notifyhub.notification.dto.SendNotificationRequest;
+import com.notifyhub.observability.NotifyMetrics;
 import com.notifyhub.recipient.QuietHours;
 import com.notifyhub.recipient.Recipient;
 import com.notifyhub.recipient.RecipientPreference;
@@ -27,7 +26,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
-import com.notifyhub.common.exception.RateLimitExceededException;
 import com.notifyhub.ratelimit.RateLimitDecision;
 import com.notifyhub.ratelimit.RateLimitProperties;
 import com.notifyhub.ratelimit.RateLimiter;
@@ -51,6 +49,7 @@ public class NotificationService {
     private final ApplicationEventPublisher eventPublisher;
     private final RateLimiter rateLimiter;
     private final RateLimitProperties rateLimitProperties;
+    private final NotifyMetrics metrics;
 
     @Transactional
     public SendResult accept(Long tenantId, SendNotificationRequest request, String idempotencyKey) {
@@ -138,6 +137,8 @@ public class NotificationService {
             eventPublisher.publishEvent(new NotificationQueuedEvent(
                     saved.getId(), saved.getPublicId(), saved.getChannel()));
         }
+        metrics.accepted(channel, saved.getStatus());
+
         return new SendResult(NotificationResponse.from(saved), false);
     }
 
@@ -156,6 +157,25 @@ public class NotificationService {
         return NotificationResponse.from(notification);
     }
 
+    @Transactional
+    public NotificationResponse cancel(Long tenantId, String notificationId) {
+        Notification notification = notificationRepository
+                .findByPublicIdAndTenantId(notificationId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Notification not found: " + notificationId));
+
+        if (notification.getStatus() == NotificationStatus.CANCELLED) {
+            return NotificationResponse.from(notification);          // already done: idempotent
+        }
+        if (!notification.getStatus().canTransitionTo(NotificationStatus.CANCELLED)) {
+            throw new StateConflictException(
+                    "Cannot cancel a notification that is " + notification.getStatus());
+        }
+        notification.transitionTo(NotificationStatus.CANCELLED);
+        notification.setFailureReason("CANCELLED_BY_CLIENT");
+        return NotificationResponse.from(notification);
+    }
+
     private Optional<SendResult> findReplay(Long tenantId, String key, String fingerprint) {
         return notificationRepository.findByTenantIdAndIdempotencyKey(tenantId, key)
                 .map(existing -> {
@@ -163,6 +183,7 @@ public class NotificationService {
                         throw new IdempotencyConflictException(
                                 "Idempotency-Key was already used with a different request");
                     }
+
                     return new SendResult(NotificationResponse.from(existing), true);
                 });
     }
