@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout").permitAll()
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()   // authenticated by HMAC signature, not by API key or JWT
                         .requestMatchers("/api/v1/auth/me").hasAnyRole("ADMIN", "VIEWER")
                         .requestMatchers("/api/v1/recipients/**").hasRole("TENANT")
                         .requestMatchers("/api/v1/templates/**").hasRole("TENANT")
