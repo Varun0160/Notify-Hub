@@ -3,6 +3,8 @@ package com.notifyhub.tenant;
 import com.notifyhub.tenant.dto.ApiKeyCreatedResponse;
 import com.notifyhub.tenant.dto.ApiKeyResponse;
 import com.notifyhub.tenant.dto.CreateApiKeyRequest;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -10,7 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@Tag(name = "Admin")
+@SecurityRequirement(name = "BearerAuth")
 @RestController
 @RequestMapping("/api/v1/tenants/{tenantId}/api-keys")
 @RequiredArgsConstructor

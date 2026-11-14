@@ -1,5 +1,6 @@
 package com.notifyhub.security;
 
+import com.notifyhub.ratelimit.LoginRateLimitFilter;
 import com.notifyhub.ratelimit.RateLimitFilter;
 import com.notifyhub.ratelimit.RateLimitProperties;
 import com.notifyhub.ratelimit.RateLimiter;
@@ -8,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -19,9 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.notifyhub.ratelimit.LoginRateLimitFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-
 
 import java.io.IOException;
 import java.time.Instant;
@@ -43,7 +43,27 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // CHAIN 1: only for the documentation paths. Looser CSP so Swagger UI can load its scripts and styles.
     @Bean
+    @Order(1)
+    SecurityFilterChain docsFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**")
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.contentSecurityPolicy(csp -> csp.policyDirectives(
+                        "default-src 'self'; style-src 'self' 'unsafe-inline'; "
+                                + "script-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+                                + "frame-ancestors 'none'")))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
+    // CHAIN 2: everything else (the real API). No securityMatcher, so it matches all remaining
+    // requests, which is why it must come LAST (@Order(2)).
+    @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
@@ -58,7 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout").permitAll()
-                        .requestMatchers("/api/v1/webhooks/**").permitAll()   // authenticated by HMAC signature, not by API key or JWT
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()
                         .requestMatchers("/api/v1/auth/me").hasAnyRole("ADMIN", "VIEWER")
                         .requestMatchers("/api/v1/recipients/**").hasRole("TENANT")
                         .requestMatchers("/api/v1/templates/**").hasRole("TENANT")

@@ -3,6 +3,7 @@ package com.notifyhub.webhook;
 import com.notifyhub.common.exception.InvalidRequestException;
 import com.notifyhub.common.exception.InvalidSignatureException;
 import com.notifyhub.observability.NotifyMetrics;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.Map;
 
 @Slf4j
+@Tag(name = "Webhooks")
 @RestController
 @RequestMapping("/api/v1/webhooks")
 @RequiredArgsConstructor

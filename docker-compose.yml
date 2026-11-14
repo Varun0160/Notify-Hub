@@ -2,6 +2,7 @@ services:
   mysql:
     image: mysql:8.4
     container_name: notifyhub-mysql
+    command: --innodb-lock-wait-timeout=5      # fail fast on a stuck lock (Day 17)
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: notifyhub
@@ -12,9 +13,12 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-      interval: 10s
-      retries: 5
+      # 127.0.0.1 forces TCP: the temporary init server only listens on a socket
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
 
   rabbitmq:
     image: rabbitmq:3.13-management
@@ -23,14 +27,16 @@ services:
       RABBITMQ_DEFAULT_USER: notifyhub
       RABBITMQ_DEFAULT_PASS: notifyhub
     ports:
-      - "5672:5672"     # AMQP: what our app connects to
-      - "15672:15672"   # management web UI
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
-      retries: 5
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   redis:
     image: redis:7-alpine
@@ -38,9 +44,45 @@ services:
     ports:
       - "6379:6379"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
+      timeout: 3s
       retries: 5
+
+  app:
+    build: .
+    image: notifyhub:local
+    container_name: notifyhub-app
+    profiles: ["app"]                     # only started with: docker compose --profile app up
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Service names and INTERNAL ports, not localhost and 3307
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/notifyhub
+      DB_USER: notifyhub
+      DB_PASSWORD: notifyhub
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_DATA_REDIS_HOST: redis
+      # Secrets come from .env and are REQUIRED: compose refuses to start without them
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env and set JWT_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?copy .env.example to .env and set WEBHOOK_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?copy .env.example to .env and set ADMIN_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    stop_grace_period: 30s
+    mem_limit: 768m
+    restart: unless-stopped
 
 volumes:
   mysql_data:

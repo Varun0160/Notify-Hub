@@ -14,10 +14,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Parameter;
 
 import java.net.URI;
 import java.time.Instant;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+@Tag(name = "Notifications")
+@SecurityRequirement(name = "ApiKeyAuth")
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
@@ -30,6 +35,7 @@ public class NotificationController {
 
     @PostMapping
     public ResponseEntity<NotificationResponse> send(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal TenantPrincipal principal,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody SendNotificationRequest request) {
@@ -46,6 +52,7 @@ public class NotificationController {
 
     @PostMapping("/batch")
     public ResponseEntity<BatchSendResponse> sendBatch(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal TenantPrincipal principal,
             @Valid @RequestBody BatchSendRequest request) {
 
@@ -56,6 +63,7 @@ public class NotificationController {
 
     @GetMapping
     public PageResponse<NotificationResponse> list(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal TenantPrincipal principal,
             @RequestParam(value = "status", required = false) NotificationStatus status,
             @RequestParam(value = "channel", required = false) Channel channel,

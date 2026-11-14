@@ -4,6 +4,7 @@ import com.notifyhub.auth.dto.LoginRequest;
 import com.notifyhub.auth.dto.RefreshRequest;
 import com.notifyhub.auth.dto.TokenResponse;
 import com.notifyhub.security.UserPrincipal;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,7 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
+@Tag(name = "Auth")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -36,7 +37,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public Map<String, String> me(@AuthenticationPrincipal UserPrincipal principal) {
+    public Map<String, String> me(
+            @AuthenticationPrincipal UserPrincipal principal) {
         return Map.of(
                 "userId", principal.userPublicId(),
                 "email", principal.email(),
