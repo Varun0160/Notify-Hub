@@ -14,6 +14,8 @@ RUN ./mvnw -B -q -DskipTests package && cp target/*.jar app.jar
 
 # ---------- stage 2: runtime ----------
 FROM eclipse-temurin:27-jre
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system app && useradd --system --gid app --no-create-home app
 WORKDIR /app
 COPY --from=build /workspace/app.jar app.jar
