@@ -1,4 +1,4 @@
-![CI](https://github.com/Varun010/Notify-Hub/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Varun0160/Notify-Hub/actions/workflows/ci.yml/badge.svg)
 
 A multi-tenant notification platform. Client apps call one API ("send this user the `welcome` template by email"). NotifyHub decides **whether** to send (user preferences, quiet hours, rate limits), delivers **asynchronously** through RabbitMQ, **retries** failures with backoff, and **tracks delivery** through signed provider webhooks.
 
